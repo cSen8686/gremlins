@@ -113,3 +113,242 @@ if (typeof TONConnectUI === 'undefined') {
             console.log('Wallet verbunden:', playerWalletAddress);
             document.getElementById('connectWallet').textContent = 'Wallet Connected';
         } else {
+            playerWalletAddress = null;
+            console.log('Wallet getrennt');
+            document.getElementById('connectWallet').textContent = translations[currentLang]['connect-wallet'];
+        }
+    });
+
+    document.getElementById('connectWallet').addEventListener('click', () => {
+        tonConnectUI.openModal();
+    });
+}
+
+// Event-Listener für Dropdown
+document.getElementById('languageSwitch').addEventListener('change', (event) => {
+    switchLanguage(event.target.value);
+});
+
+// Funktion zum Einzahlen auf eine Karte
+function depositToCard(cardId) {
+    const card = cardData[cardId];
+    if (!tonConnectUI || !tonConnectUI.connected) {
+        alert(translations[currentLang]['connect-wallet-first']);
+        return;
+    }
+
+    let amount;
+    if (cardId === 'damon') {
+        amount = parseFloat(prompt(translations[currentLang]['deposit-amount']));
+        if (isNaN(amount) || amount < card.minTon || amount > card.maxTon) {
+            alert(`Please enter a valid amount between ${card.minTon} and ${card.maxTon} TON`);
+            return;
+        }
+        if (card.baseTon + amount > card.maxTon) {
+            alert(`Total deposit for Damon cannot exceed ${card.maxTon} TON`);
+            return;
+        }
+    } else {
+        amount = card.requiredTon;
+    }
+
+    const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 60,
+        messages: [{
+            address: yourWalletAddress,
+            amount: (amount * 1e9).toString()
+        }]
+    };
+
+    tonConnectUI.sendTransaction(transaction)
+        .then(() => {
+            card.baseTon += amount;
+            card.intervalEarnings = (card.baseTon / 100 * card.dailyApi) / (24 / card.intervalHours);
+            card.active = true;
+            updateUI(cardId);
+            saveState();
+            alert(`Deposited ${amount} TON to ${cardId}`);
+        })
+        .catch(e => {
+            console.error(e);
+            alert('Deposit failed!');
+        });
+}
+
+// Funktion zum Sammeln der Gewinne
+function collectEarnings(cardId) {
+    const card = cardData[cardId];
+    const now = Date.now();
+    const intervalInMs = card.intervalHours * 60 * 60 * 1000;
+
+    if (!card.active) {
+        alert('Card is not active. Deposit TON first!');
+        return;
+    }
+
+    if (!card.lastCollected || (now - card.lastCollected >= intervalInMs)) {
+        card.currentBalance += card.intervalEarnings;
+        card.totalCollected += card.intervalEarnings;
+        card.lastCollected = now;
+        walletBalance += card.intervalEarnings;
+        updateUI(cardId);
+        document.getElementById('walletBalance').innerText = 
+            `${translations[currentLang]['wallet-balance']}${walletBalance.toFixed(4)} TON`;
+        saveState();
+    } else {
+        alert(`${translations[currentLang]['collect-wait']}${card.intervalHours}${translations[currentLang]['collect-hours']}`);
+    }
+}
+
+// Funktion für Withdraw-Formular anzeigen
+function showWithdrawForm() {
+    document.getElementById('withdrawForm').style.display = 'block';
+}
+
+// Funktion für Auszahlung
+async function withdraw() {
+    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    const address = document.getElementById('withdrawAddress').value.trim();
+
+    if (isNaN(amount) || amount <= 0 || amount > walletBalance) {
+        alert('Invalid amount!');
+        return;
+    }
+    if (!address || address.length < 48) {
+        alert('Invalid wallet address!');
+        return;
+    }
+
+    const confirmMsg = `${translations[currentLang]['withdraw-confirm']}${amount.toFixed(4)} TON to ${address}?`;
+    if (!confirm(confirmMsg)) return;
+
+    if (!tonConnectUI || !tonConnectUI.connected) {
+        alert(translations[currentLang]['connect-wallet-first']);
+        return;
+    }
+
+    const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 60,
+        messages: [{
+            address: address,
+            amount: (amount * 1e9).toString()
+        }]
+    };
+
+    try {
+        const result = await tonConnectUI.sendTransaction(transaction);
+        walletBalance -= amount;
+        for (let cardId in cardData) {
+            updateUI(cardId);
+        }
+        document.getElementById('walletBalance').innerText = 
+            `${translations[currentLang]['wallet-balance']}${walletBalance.toFixed(4)} TON`;
+        document.getElementById('withdrawForm').style.display = 'none';
+        document.getElementById('withdrawAmount').value = '';
+        document.getElementById('withdrawAddress').value = '';
+        saveState();
+        alert(`${translations[currentLang]['withdraw-success']}${amount.toFixed(4)} TON`);
+    } catch (e) {
+        console.error(e);
+        alert('Withdrawal failed!');
+    }
+}
+
+// Funktion für allgemeine Einzahlung
+function deposit() {
+    if (!tonConnectUI || !tonConnectUI.connected) {
+        alert(translations[currentLang]['connect-wallet-first']);
+        return;
+    }
+    alert(`Please send TON to: ${yourWalletAddress}`);
+    // Hier könnte später eine echte Überprüfung des Geldeingangs hinzugefügt werden
+}
+
+// Funktion zum Speichern des Spielstands
+function saveState() {
+    localStorage.setItem('walletBalance', walletBalance);
+    localStorage.setItem('cardData', JSON.stringify(cardData));
+}
+
+// Funktion zum Aktualisieren der UI
+function updateUI(cardId) {
+    const card = cardData[cardId];
+    document.getElementById(`${cardId}Collected`).innerText = 
+        `Collected: ${card.currentBalance.toFixed(4)} TON`;
+    document.getElementById(`${cardId}Total`).innerText = 
+        `${translations[currentLang]['total-collected']}${card.totalCollected.toFixed(4)} TON`;
+    const collectButton = document.querySelector(`#${cardId} button[onclick^="collect"]`);
+    collectButton.disabled = !card.active;
+    if (card.active) {
+        updateTimer(cardId);
+    } else {
+        document.getElementById(`${cardId}Timer`).innerText = 
+            `${translations[currentLang]['next-collection']}${translations[currentLang]['inactive']}`;
+    }
+}
+
+// Funktion zum Aktualisieren des Timers
+function updateTimer(cardId) {
+    const card = cardData[cardId];
+    const now = Date.now();
+    const intervalInMs = card.intervalHours * 60 * 60 * 1000;
+
+    if (!card.lastCollected) {
+        document.getElementById(`${cardId}Timer`).innerText = 
+            `${translations[currentLang]['next-collection']}${translations[currentLang]['now-available']}`;
+    } else {
+        const timeLeft = intervalInMs - (now - card.lastCollected);
+        if (timeLeft > 0) {
+            const minutesLeft = Math.floor(timeLeft / (1000 * 60));
+            const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById(`${cardId}Timer`).innerText = 
+                `${translations[currentLang]['next-collection']}${minutesLeft}m ${secondsLeft}s`;
+        } else {
+            document.getElementById(`${cardId}Timer`).innerText = 
+                `${translations[currentLang]['next-collection']}${translations[currentLang]['now-available']}`;
+        }
+    }
+}
+
+// Funktion zum Anzeigen des Bereichs
+function showSection(sectionId) {
+    document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(button => button.classList.remove('active'));
+    document.getElementById(`${sectionId}Section`).classList.add('active');
+    document.querySelector(`nav button[onclick="showSection('${sectionId}')"]`).classList.add('active');
+}
+
+// Funktion zum Wechseln der Sprache
+function switchLanguage(lang) {
+    console.log('Sprachwechsel zu:', lang);
+    currentLang = lang;
+    document.querySelectorAll('[data-lang]').forEach(element => {
+        const key = element.getAttribute('data-lang');
+        console.log('Aktualisiere:', element.id, 'Key:', key, 'Text:', translations[lang][key]);
+        if (key === 'total-collected') {
+            const cardId = element.id.replace('Total', '');
+            element.innerText = `${translations[lang][key]}${cardData[cardId].totalCollected.toFixed(4)} TON`;
+        } else if (key === 'wallet-balance') {
+            element.innerText = `${translations[lang][key]}${walletBalance.toFixed(4)} TON`;
+        } else if (key === 'next-collection') {
+            updateTimer(element.id.replace('Timer', ''));
+        } else if (translations[lang][key]) {
+            element.innerText = translations[lang][key];
+        } else {
+            console.warn('Keine Übersetzung für', key, 'in', lang);
+        }
+    });
+}
+
+// Timer jede Sekunde aktualisieren
+setInterval(() => {
+    for (let cardId in cardData) {
+        if (cardData[cardId].active) updateTimer(cardId);
+    }
+}, 1000);
+
+// Initiale UI setzen
+updateUI('chuchu');
+updateUI('kev');
+updateUI('damon');
+switchLanguage('en');
