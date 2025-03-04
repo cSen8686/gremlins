@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gnoms Universe</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+</head>
+<body>
+    <h1 data-lang="title">Gnoms Universe</h1>
+    
+    <select id="languageSwitch">
+        <option value="en">English</option>
+        <option value="ru">Русский</option>
+        <option value="tr">Türkçe</option>
+    </select>
+
+    <nav>
+        <button onclick="showSection('home')" class="active" data-lang="nav-home">Home</button>
+        <button onclick="showSection('earn')" data-lang="nav-earn">Earn</button>
+        <button onclick="showSection('balance')" data-lang="nav-balance">Balance</button>
+    </nav>
+
+    <div id="homeSection" class="section container active">
+        <div class="coming-soon" data-lang="coming-soon">Coming Soon</div>
+        <div class="coming-soon" data-lang="coming-soon">Coming Soon</div>
+    </div>
+
+    <div id="earnSection" class="section container">
+        <div class="gnom" id="chuchu">
+            <img src="ChuChu.png" alt="ChuChu" class="gnom-image">
+            <h2>ChuChu</h2>
+            <p data-lang="chuchu-desc">1 TON - 4.8% API/d - every 2h earn</p>
+            <button onclick="depositToCard('chuchu')" data-lang="deposit-to-card">Deposit 1 TON</button>
+            <button onclick="collectEarnings('chuchu')" data-lang="collect" disabled>Collect</button>
+            <div class="info collected" id="chuchuCollected">Collected: 0 TON</div>
+            <div class="info total" id="chuchuTotal" data-lang="total-collected">Total Collected: 0 TON</div>
+            <div class="info" id="chuchuTimer" data-lang="next-collection">Next collection: Inactive</div>
+        </div>
+        <div class="gnom" id="kev">
+            <img src="Kev.png" alt="Kev" class="gnom-image">
+            <h2>Kev</h2>
+            <p data-lang="kev-desc">3 TON - 3% API/d - every 3h earn</p>
+            <button onclick="depositToCard('kev')" data-lang="deposit-to-card">Deposit 3 TON</button>
+            <button onclick="collectEarnings('kev')" data-lang="collect" disabled>Collect</button>
+            <div class="info collected" id="kevCollected">Collected: 0 TON</div>
+            <div class="info total" id="kevTotal" data-lang="total-collected">Total Collected: 0 TON</div>
+            <div class="info" id="kevTimer" data-lang="next-collection">Next collection: Inactive</div>
+        </div>
+        <div class="gnom" id="damon">
+            <img src="Damon.png" alt="Damon" class="gnom-image">
+            <h2>Damon</h2>
+            <p data-lang="damon-desc">10-50 TON - 1.5% API/d - every 4h</p>
+            <button onclick="depositToCard('damon')" data-lang="deposit-to-card">Deposit to Damon</button>
+            <button onclick="collectEarnings('damon')" data-lang="collect" disabled>Collect</button>
+            <div class="info collected" id="damonCollected">Collected: 0 TON</div>
+            <div class="info total" id="damonTotal" data-lang="total-collected">Total Collected: 0 TON</div>
+            <div class="info" id="damonTimer" data-lang="next-collection">Next collection: Inactive</div>
+        </div>
+    </div>
+
+    <div id="balanceSection" class="section container">
+        <div class="info" id="walletBalance" data-lang="wallet-balance">Wallet Balance: 0 TON</div>
+        <button id="connectWallet" data-lang="connect-wallet">Connect Wallet</button>
+        <button onclick="showWithdrawForm()" data-lang="withdraw">Withdraw</button>
+        <button onclick="deposit()" data-lang="deposit">Deposit</button>
+        <div id="withdrawForm" class="withdraw-form" style="display: none;">
+            <input type="number" id="withdrawAmount" placeholder="Amount (TON)" step="0.001" min="0">
+            <input type="text" id="withdrawAddress" placeholder="Your Wallet Address">
+            <button onclick="withdraw()">Confirm Withdraw</button>
+        </div>
+    </div>
+
+    <script src="tonconnect-ui.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
