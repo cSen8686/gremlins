@@ -1,7 +1,7 @@
 // Wallet-Balance und Spieler-Daten
 let walletBalance = localStorage.getItem('walletBalance') ? parseFloat(localStorage.getItem('walletBalance')) : 0;
 let playerWalletAddress = null;
-const yourWalletAddress = "UQCCMn_NAiSHIbKpjxVLWkboRYGw3YlfVxb8FJa0iX2mMIe0"; // Deine Wallet für Einzahlungen
+const yourWalletAddress = "UQCCMn_NAiSHIbKpjxVLWkboRYGw3YlfVxb8FJa0iX2mMIe0";
 
 // Daten für jede Karte
 const cardData = JSON.parse(localStorage.getItem('cardData')) || {
@@ -37,7 +37,8 @@ const translations = {
         "withdraw-confirm": "Are you sure you want to withdraw ",
         "connect-wallet-first": "Please connect a wallet first!",
         "inactive": "Inactive",
-        "deposit-amount": "Enter amount to deposit (10-50 TON for Damon)"
+        "deposit-amount": "Enter amount to deposit (10-50 TON for Damon)",
+        "transaction-failed": "Transaction failed. Please try again."
     },
     ru: {
         title: "TonLin's",
@@ -64,7 +65,8 @@ const translations = {
         "withdraw-confirm": "Вы уверены, что хотите вывести ",
         "connect-wallet-first": "Сначала подключите кошелек!",
         "inactive": "Неактивно",
-        "deposit-amount": "Введите сумму для пополнения (10-50 TON для Damon)"
+        "deposit-amount": "Введите сумму для пополнения (10-50 TON для Damon)",
+        "transaction-failed": "Транзакция не удалась. Попробуйте снова."
     },
     tr: {
         title: "TonLin's",
@@ -91,7 +93,8 @@ const translations = {
         "withdraw-confirm": " emin misiniz çekmek istediğinizden ",
         "connect-wallet-first": "Önce cüzdanı bağlayın!",
         "inactive": "Pasif",
-        "deposit-amount": "Yatırılacak miktarı girin (Damon için 10-50 TON)"
+        "deposit-amount": "Yatırılacak miktarı girin (Damon için 10-50 TON)",
+        "transaction-failed": "İşlem başarısız oldu. Lütfen tekrar deneyin."
     }
 };
 
@@ -130,7 +133,7 @@ document.getElementById('languageSwitch').addEventListener('change', (event) => 
 });
 
 // Funktion zum Einzahlen auf eine Karte
-function depositToCard(cardId) {
+async function depositToCard(cardId) {
     const card = cardData[cardId];
     if (!tonConnectUI || !tonConnectUI.connected) {
         alert(translations[currentLang]['connect-wallet-first']);
@@ -160,19 +163,18 @@ function depositToCard(cardId) {
         }]
     };
 
-    tonConnectUI.sendTransaction(transaction)
-        .then(() => {
-            card.baseTon += amount;
-            card.intervalEarnings = (card.baseTon / 100 * card.dailyApi) / (24 / card.intervalHours);
-            card.active = true;
-            updateUI(cardId);
-            saveState();
-            alert(`Deposited ${amount} TON to ${cardId}`);
-        })
-        .catch(e => {
-            console.error(e);
-            alert('Deposit failed!');
-        });
+    try {
+        await tonConnectUI.sendTransaction(transaction);
+        card.baseTon += amount;
+        card.intervalEarnings = (card.baseTon / 100 * card.dailyApi) / (24 / card.intervalHours);
+        card.active = true;
+        updateUI(cardId);
+        saveState();
+        alert(`Deposited ${amount} TON to ${cardId}`);
+    } catch (e) {
+        console.error('Deposit Error:', e);
+        alert(translations[currentLang]['transaction-failed']);
+    }
 }
 
 // Funktion zum Sammeln der Gewinne
@@ -236,7 +238,7 @@ async function withdraw() {
     };
 
     try {
-        const result = await tonConnectUI.sendTransaction(transaction);
+        await tonConnectUI.sendTransaction(transaction);
         walletBalance -= amount;
         for (let cardId in cardData) {
             updateUI(cardId);
@@ -249,8 +251,8 @@ async function withdraw() {
         saveState();
         alert(`${translations[currentLang]['withdraw-success']}${amount.toFixed(4)} TON`);
     } catch (e) {
-        console.error(e);
-        alert('Withdrawal failed!');
+        console.error('Withdraw Error:', e);
+        alert(translations[currentLang]['transaction-failed']);
     }
 }
 
@@ -261,7 +263,19 @@ function deposit() {
         return;
     }
     alert(`Please send TON to: ${yourWalletAddress}`);
-    // Hier könnte später eine echte Überprüfung des Geldeingangs hinzugefügt werden
+}
+async function depositToCard(cardId) {
+    // ... (vorheriger Code)
+    try {
+        const result = await tonConnectUI.sendTransaction(transaction);
+        // Hier Backend-Aufruf einfügen, z. B.:
+        // const confirmed = await fetch('https://dein-backend.com/confirm', { method: 'POST', body: JSON.stringify({ tx: result }) });
+        card.baseTon += amount;
+        // ... (Rest)
+    } catch (e) {
+        console.error('Deposit Error:', e);
+        alert(translations[currentLang]['transaction-failed']);
+    }
 }
 
 // Funktion zum Speichern des Spielstands
