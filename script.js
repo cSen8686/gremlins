@@ -1,3 +1,5 @@
+/* jshint -W069 */
+
 // Wallet-Balance und Spieler-Daten
 let walletBalance = localStorage.getItem('walletBalance') ? parseFloat(localStorage.getItem('walletBalance')) : 0;
 let playerWalletAddress = null;
@@ -36,7 +38,7 @@ const translations = {
         "withdraw-success": "Withdrawal: ",
         "withdraw-confirm": "Are you sure you want to withdraw ",
         "connect-wallet-first": "Please connect a wallet first!",
-        "inactive": "Inactive",
+        inactive: "Inactive",
         "deposit-amount": "Enter amount to deposit (10-50 TON for Damon)",
         "transaction-failed": "Transaction failed. Please try again."
     },
@@ -64,7 +66,7 @@ const translations = {
         "withdraw-success": "Вывод: ",
         "withdraw-confirm": "Вы уверены, что хотите вывести ",
         "connect-wallet-first": "Сначала подключите кошелек!",
-        "inactive": "Неактивно",
+        inactive: "Неактивно",
         "deposit-amount": "Введите сумму для пополнения (10-50 TON для Damon)",
         "transaction-failed": "Транзакция не удалась. Попробуйте снова."
     },
@@ -92,7 +94,7 @@ const translations = {
         "withdraw-success": "Çekim: ",
         "withdraw-confirm": " emin misiniz çekmek istediğinizden ",
         "connect-wallet-first": "Önce cüzdanı bağlayın!",
-        "inactive": "Pasif",
+        inactive: "Pasif",
         "deposit-amount": "Yatırılacak miktarı girin (Damon için 10-50 TON)",
         "transaction-failed": "İşlem başarısız oldu. Lütfen tekrar deneyin."
     }
@@ -264,19 +266,6 @@ function deposit() {
     }
     alert(`Please send TON to: ${yourWalletAddress}`);
 }
-async function depositToCard(cardId) {
-    // ... (vorheriger Code)
-    try {
-        const result = await tonConnectUI.sendTransaction(transaction);
-        // Hier Backend-Aufruf einfügen, z. B.:
-        // const confirmed = await fetch('https://dein-backend.com/confirm', { method: 'POST', body: JSON.stringify({ tx: result }) });
-        card.baseTon += amount;
-        // ... (Rest)
-    } catch (e) {
-        console.error('Deposit Error:', e);
-        alert(translations[currentLang]['transaction-failed']);
-    }
-}
 
 // Funktion zum Speichern des Spielstands
 function saveState() {
@@ -297,7 +286,7 @@ function updateUI(cardId) {
         updateTimer(cardId);
     } else {
         document.getElementById(`${cardId}Timer`).innerText = 
-            `${translations[currentLang]['next-collection']}${translations[currentLang]['inactive']}`;
+            `${translations[currentLang]['next-collection']}${translations[currentLang].inactive}`;
     }
 }
 
